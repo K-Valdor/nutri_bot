@@ -19,21 +19,23 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           set -e
+          echo "🚀 Starting deployment..."
           
-          echo "🔄 Updating code from GitHub..."
+          # Останавливаем службу перед обновлением
+          sudo systemctl stop nutrition-bot || true
+          
+          # Копируем только код бота (логика)
+          echo "📦 Updating bot code..."
+          cp -rf bot/* /opt/nutrition-bot/bot/
+          cp requirements.txt /opt/nutrition-bot/
+          
+          # Устанавливаем зависимости
+          echo "📚 Installing dependencies..."
           cd /opt/nutrition-bot
-          git pull origin main
+          python3 -m pip install --user -r requirements.txt
           
-          echo "🔧 Setting up environment..."
-          # Создаем .env файл с токеном
-          cat > /opt/nutrition-bot/.env << EOF
-          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          EOF
-          chmod 600 /opt/nutrition-bot/.env
-          
-          echo "🚀 Running deployment..."
-          cd /opt/nutrition-bot/scripts
-          chmod +x deploy.sh
-          ./deploy.sh
+          # Запускаем службу
+          echo "▶️ Starting bot..."
+          sudo systemctl start nutrition-bot
           
           echo "✅ Deployment completed!"
