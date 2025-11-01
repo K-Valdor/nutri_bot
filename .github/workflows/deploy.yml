@@ -11,29 +11,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Prepare deployment
-      run: |
-        mkdir -p deployment
-        cp -r bot requirements.txt scripts deployment/
-        tar -czf deploy.tar.gz deployment/
-
     - name: Deploy to VPS
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_HOST }}
         username: nutrition-bot
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        envs: BOT_TOKEN
         script: |
-          # Передаем токен как переменную окружения
-          export BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
-
-          # Создаем временную директорию
-          mkdir -p /tmp/nutrition-bot-deploy
-
-          # Копируем файлы (через tar или rsync было бы лучше, но для простоты)
-          echo "Copying files..."
-
-          # Запускаем деплой
-          chmod +x scripts/deploy.sh
-          ./scripts/deploy.sh
+          set -e  # Exit on error
+          
+          echo "🔄 Updating code from GitHub..."
+          cd /opt/nutrition-bot
+          sudo -u nutrition-bot git pull origin main
+          
+          echo "🔧 Setting up environment..."
+          # Создаем .env файл если его нет
+          if [ ! -f /opt/nutrition-bot/.env ]; then
+            echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" | sudo -u nutrition-bot tee /opt/nutrition-bot/.env > /dev/null
+            sudo chmod 600 /opt/nutrition-bot/.env
+          fi
+          
+          echo "🚀 Running deployment script..."
+          cd /opt/nutrition-bot/scripts
+          chmod +x deploy.sh
+          ./deploy.sh
+          
+          echo "✅ Deployment completed!"
