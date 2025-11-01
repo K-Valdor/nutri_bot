@@ -28,9 +28,7 @@ jobs:
           echo "📥 Downloading code..."
           TEMP_DIR=$(mktemp -d)
           cd $TEMP_DIR
-          
-          # Клонируем репозиторий (или используем другой метод передачи файлов)
-          git clone https://github.com/${{ github.repository }}.git .
+          git clone https://github.com/K-Valdor/nutrition-bot.git .
           
           # Копируем код бота
           echo "📦 Updating bot code..."
@@ -38,17 +36,46 @@ jobs:
           cp -rf bot/* /opt/nutrition-bot/bot/
           cp requirements.txt /opt/nutrition-bot/
           
-          # Устанавливаем зависимости
-          echo "📚 Installing dependencies..."
+          # Обновляем виртуальное окружение
+          echo "🐍 Updating virtual environment..."
           cd /opt/nutrition-bot
-          python3 -m pip install --user -r requirements.txt
+          sudo -u nutrition-bot ./venv/bin/pip install -r requirements.txt
+          
+          # Проверяем что зависимости работают
+          echo "🔍 Checking dependencies..."
+          if sudo -u nutrition-bot ./venv/bin/python3 -c "import telegram; print('✅ Dependencies OK')"; then
+            echo "✅ Dependencies check passed"
+          else
+            echo "❌ Dependencies check failed"
+            exit 1
+          fi
+          
+          # Проверяем что код работает
+          echo "🔍 Testing bot code..."
+          cd /opt/nutrition-bot/bot
+          if sudo -u nutrition-bot ../venv/bin/python3 -c "import main; print('✅ Code syntax OK')"; then
+            echo "✅ Code check passed"
+          else
+            echo "❌ Code check failed"
+            exit 1
+          fi
           
           # Запускаем службу
           echo "▶️ Starting bot..."
           sudo systemctl daemon-reload
           sudo systemctl start nutrition-bot
           
+          # Ждем и проверяем статус
+          sleep 5
+          echo "📊 Checking service status..."
+          if sudo systemctl is-active --quiet nutrition-bot; then
+            echo "✅ Bot started successfully!"
+          else
+            echo "❌ Bot failed to start. Showing logs:"
+            sudo journalctl -u nutrition-bot -n 30 --no-pager
+            exit 1
+          fi
+          
           # Чистим временные файлы
           rm -rf $TEMP_DIR
-          
           echo "✅ Deployment completed!"
