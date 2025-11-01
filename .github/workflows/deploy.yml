@@ -24,8 +24,17 @@ jobs:
           # Останавливаем службу перед обновлением
           sudo systemctl stop nutrition-bot || true
           
-          # Копируем только код бота (логика)
+          # Создаем временную директорию и копируем файлы
+          echo "📥 Downloading code..."
+          TEMP_DIR=$(mktemp -d)
+          cd $TEMP_DIR
+          
+          # Клонируем репозиторий (или используем другой метод передачи файлов)
+          git clone https://github.com/${{ github.repository }}.git .
+          
+          # Копируем код бота
           echo "📦 Updating bot code..."
+          mkdir -p /opt/nutrition-bot/bot
           cp -rf bot/* /opt/nutrition-bot/bot/
           cp requirements.txt /opt/nutrition-bot/
           
@@ -36,6 +45,10 @@ jobs:
           
           # Запускаем службу
           echo "▶️ Starting bot..."
+          sudo systemctl daemon-reload
           sudo systemctl start nutrition-bot
+          
+          # Чистим временные файлы
+          rm -rf $TEMP_DIR
           
           echo "✅ Deployment completed!"
