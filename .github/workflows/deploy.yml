@@ -18,20 +18,20 @@ jobs:
         username: nutrition-bot
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          set -e  # Exit on error
+          set -e
           
           echo "🔄 Updating code from GitHub..."
           cd /opt/nutrition-bot
-          sudo -u nutrition-bot git pull origin main
+          git pull origin main
           
           echo "🔧 Setting up environment..."
-          # Создаем .env файл если его нет
-          if [ ! -f /opt/nutrition-bot/.env ]; then
-            echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" | sudo -u nutrition-bot tee /opt/nutrition-bot/.env > /dev/null
-            sudo chmod 600 /opt/nutrition-bot/.env
-          fi
+          # Создаем .env файл с токеном
+          cat > /opt/nutrition-bot/.env << EOF
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          EOF
+          chmod 600 /opt/nutrition-bot/.env
           
-          echo "🚀 Running deployment script..."
+          echo "🚀 Running deployment..."
           cd /opt/nutrition-bot/scripts
           chmod +x deploy.sh
           ./deploy.sh
